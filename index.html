@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>چت عمومی</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .login-box, .chat-box {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .login-box {
+            display: block;
+        }
+        .chat-box {
+            display: none;
+            height: 500px;
+            display: flex;
+            flex-direction: column;
+        }
+        #chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        .message {
+            margin: 10px 0;
+            padding: 8px;
+            border-radius: 5px;
+            background: #e9ecef;
+        }
+        .message .username {
+            font-weight: bold;
+            color: #007bff;
+        }
+        #message-form {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        #message-input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            padding: 8px 16px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        input {
+            padding: 8px;
+            margin: 5px 0;
+            width: 100%;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="login-box" id="login-box">
+            <h2>ورود به چت</h2>
+            <input type="text" id="username" placeholder="نام کاربری" required>
+            <input type="password" id="password" placeholder="رمز عبور" required>
+            <button onclick="login()">ورود</button>
+        </div>
+
+        <div class="chat-box" id="chat-box">
+            <div id="chat-messages"></div>
+            <form id="message-form" onsubmit="sendMessage(event)">
+                <input type="text" id="message-input" placeholder="پیام خود را بنویسید..." required>
+                <button type="submit">ارسال</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://js.pusher.com/7.0/pusher.min.js"></script>
+    <script>
+        const pusher = new Pusher('eec64dfe0e559fd8dc0a', { // اینجا App Key رو بذار
+            cluster: 'us3' // اینجا Cluster رو بذار (مثلاً eu)
+        });
+        const channel = pusher.subscribe('chat-channel');
+
+        let currentUser = '';
+
+        function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            if (username && password) {
+                currentUser = username;
+                document.getElementById('login-box').style.display = 'none';
+                document.getElementById('chat-box').style.display = 'flex';
+                loadMessages();
+            } else {
+                alert('لطفاً نام کاربری و رمز عبور را وارد کنید');
+            }
+        }
+
+        function sendMessage(event) {
+            event.preventDefault();
+            const messageInput = document.getElementById('message-input');
+            const message = messageInput.value;
+            if (message) {
+                fetch('https://odd1404.freeamoozesh63.workers.dev/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user: currentUser, message: message })
+                });
+                messageInput.value = '';
+            }
+        }
+
+        function displayMessage(user, message) {
+            const messagesDiv = document.getElementById('chat-messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message');
+            messageDiv.innerHTML = `<span class="username">${user}:</span> ${message}`;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function loadMessages() {
+            channel.bind('new-message', (data) => {
+                displayMessage(data.user, data.message);
+            });
+        }
+    </script>
+</body>
+</html>
