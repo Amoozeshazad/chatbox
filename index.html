@@ -94,14 +94,9 @@
         </div>
     </div>
 
-    <script src="https://js.pusher.com/7.0/pusher.min.js"></script>
     <script>
-        const pusher = new Pusher('eec64dfe0e559fd8dc0a', { // اینجا App Key رو بذار
-            cluster: 'us3' // اینجا Cluster رو بذار (مثلاً eu)
-        });
-        const channel = pusher.subscribe('chat-channel');
-
         let currentUser = '';
+        let ws;
 
         function login() {
             const username = document.getElementById('username').value;
@@ -110,22 +105,32 @@
                 currentUser = username;
                 document.getElementById('login-box').style.display = 'none';
                 document.getElementById('chat-box').style.display = 'flex';
-                loadMessages();
+                connectWebSocket();
             } else {
                 alert('لطفاً نام کاربری و رمز عبور را وارد کنید');
             }
+        }
+
+        function connectWebSocket() {
+            ws = new WebSocket('wss://odd1404.freeamoozesh63.workers.dev/chat'); // این آدرس رو بعد از دیپلوی Worker جایگزین کن
+            ws.onopen = () => {
+                console.log('متصل شد');
+            };
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                displayMessage(data.user, data.message);
+            };
+            ws.onerror = (error) => {
+                console.error('خطا:', error);
+            };
         }
 
         function sendMessage(event) {
             event.preventDefault();
             const messageInput = document.getElementById('message-input');
             const message = messageInput.value;
-            if (message) {
-                fetch('https://odd1404.freeamoozesh63.workers.dev/send', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user: currentUser, message: message })
-                });
+            if (message && ws) {
+                ws.send(JSON.stringify({ user: currentUser, message: message }));
                 messageInput.value = '';
             }
         }
@@ -137,12 +142,6 @@
             messageDiv.innerHTML = `<span class="username">${user}:</span> ${message}`;
             messagesDiv.appendChild(messageDiv);
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
-        }
-
-        function loadMessages() {
-            channel.bind('new-message', (data) => {
-                displayMessage(data.user, data.message);
-            });
         }
     </script>
 </body>
